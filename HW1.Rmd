@@ -1,0 +1,337 @@
+---
+title: "Homework Assignment 1"
+author: "Carlos Sanchez"
+date: 'Assigned: Oct 24, 2020, Due Sun Nov 01, 2020 11:59PM'
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+## HW-1 Instructions
+
+> Our class emphasizes clear communication of data analysis results to non-technical audiences. I expect your HTML output documents to be readable and well formatted. I expect you to put ample comments in your R code to make the code understandable. Along with accuracy of results, I am looking for quality of presentation as well. This homework is due by **11:59PM on Nov 01st**.  To complete this assignment, follow these steps:
+
+```{r}
+#Package Intallation
+library("ggplot2")
+```
+
+
+1. Create a new RStudio Project for this HW. Sync the project directory with a GitHub Repository (see instructions on Canvas on how to do that). 
+
+2. Download the `HW1.Rmd` file from Canvas. Save the file in the RStudio Project Directory. 
+
+3. Open `HW1.Rmd` in RStudio. Replace the "Your Name Here" text in the `author:` field with your name.
+
+4. Supply your solutions to the homework by editing `HW1.Rmd`.
+
+5. Run your code in the Console and Knit HTML frequently to check for errors.
+
+6. You may find it easier to solve a problem by interacting only with the Console at first. 
+
+7. When you have completed the homework please check that your knits correctly when you click `Knit HTML`.
+
+8. "Push" all your local changes to the GitHub Repo for the project.
+
+9. Submit your RMD file, the HTML output and a link to your GitHub Repo on Canvas.
+
+
+## Data frame basics
+
+We will continue working with the nycflights dataset we looked at in class. **Please be sure to keep the data file in the same directory as the RMD file - your project directory.**
+
+First - make sure that you are reading the data correctly and doing all the data cleaning steps that we did in class. Feel free to go beyond our class work in cleaning the data if you feel the need. 
+```{r}
+nyc <- read.csv("nycflights.csv")
+#Quick exploration of the data
+summary(nyc)
+str(nyc)
+#Data Cleaning
+# Deleting the column x
+nyc$X <- NULL
+# Converting variables to factors
+nyc$origin <- as.factor(nyc$origin)
+nyc$tailnum <- as.factor(nyc$tailnum)
+nyc$month <- as.factor(nyc$month)
+nyc$dest <- as.factor(nyc$dest)
+nyc$carrier <- as.factor(nyc$carrier)
+nyc$flight<- as.factor(nyc$flight)
+
+# Re-check my data
+str(nyc)
+summary(nyc)
+```
+
+
+I now would like you to answer the following - all in their own separate R code blocks.
+
+### Data Exploration
+
+Let's first do some simple exploration of this data. 
+
+- How many airlines are there? (Hint: `levels` and `length` can be useful here)
+```{r}
+# Calculation of the number of airlines
+length(levels(nyc$carrier))
+```
+**A: There are `r length(levels(nyc$carrier))` airlines**
+
+- How many flights there were by the airline with code `OO`? (Hint: `nrow` can be useful here along with logical indexing)
+```{r}
+# Calculation of airlines with code "OO"
+ nrow(nyc[nyc$carrier == "OO",])
+```
+**A: The number of flights with code `OO` is `r nrow(nyc[nyc$carrier == "OO",])`**
+
+- How long is the shortest flight out of any NYC airport? (Hint: `min` can be useful, remember to handle `NA` values)
+```{r}
+# Calculation of the shortest flight from any NYC airport-Airport Codes:JKF/LGA
+# Min based on air time
+min(nyc$air_time[nyc$origin == "JFK" | nyc$origin == "LGA"], na.rm = TRUE)
+# Min based on distance
+min(nyc$distance[nyc$origin == "JFK" | nyc$origin == "LGA"], na.rm = TRUE)
+```
+**A: The shortest flight out of any NYC airport in air time is `r min(nyc$air_time[nyc$origin == "JFK" | nyc$origin == "LGA"], na.rm = TRUE)` mins and in distance `r min(nyc$distance[nyc$origin == "JFK" | nyc$origin == "LGA"], na.rm = TRUE)` miles**
+
+- How many flights where there by United Airlines (code: UA) on Jan 12th 2013?
+```{r}
+# Calculating the number of flights by UA on Jan 12th 2013
+nrow(nyc[nyc$carrier == "UA" & nyc$month == "1" & nyc$day == 12,])
+```
+**A: The number of flights by UA on Jan 12th of 2013 was `r nrow(nyc[nyc$carrier == "UA" & nyc$month == "1" & nyc$day == 12,])`**
+
+### Arrival Delay
+
+Lets focus on Arrival Delay.
+
+- What was the average arrival delay for all airports and all airlines combined in Jan 2013? 
+```{r}
+mean(nyc$arr_delay, na.rm = TRUE)
+```
+**A: The combined arrival delay is `r round(mean(nyc$arr_delay, na.rm = TRUE),2)` mins**
+
+- Whats was the median arrival delay for all airports and all airlines combined in Jan 2013?
+```{r}
+median(nyc$arr_delay, na.rm = TRUE)
+hist(nyc$arr_delay)
+```
+**A: The median arrival delay is `r median(nyc$arr_delay, na.rm = TRUE)` mins**
+
+Based on your answers to the two questions above, what can you say about the distribution of arrival delays? Provide your answer in a text paragraph form.
+
+**A: As we can see from the previous analysis the histogram is asymmetric or it has a long tail. This means that half of the flights are early by 5 or less mins, but, the delay in some flights is so high that it skews the average to 6.9 mins.**
+
+### Airline Performance
+
+Lets see if all airlines are equally terrible as far as flight arrival delays are concerned. For this question you will have to make sure that airline column is coded as a factor.
+
+- Calculate average arrival delays by airline (Hint: look up the command `tapply`)
+```{r}
+# To use tapply we need to remove the NAs out of the data
+nyc_no_nas <- na.omit(nyc)
+round(tapply(nyc_no_nas$arr_delay,nyc_no_nas$carrier, mean),2)
+```
+
+
+- Draw a Bar Plot of Average Arrival Delays for all the Airlines (Hint: command for making a Bar Plot is simply `barplot`)
+```{r}
+#Creating a barplot
+barplot(round(tapply(nyc_no_nas$arr_delay,nyc_no_nas$carrier, mean),2))
+```
+
+
+- Which airline has the highest average arrival delay? Which airline has the smallest average arrival delay? Are there airlines that actually have negative average delay? Provide answer to this question in a text paragraph form using 
+**inline R code**.
+
+**The highest average arrival delay is from the airline F9 - Frontier and the smallest average arrival delay is from AS - Alaska Airlines. As seen in the previous table, the are two airlines with negative arrival delays, this means that on average they arrive early.**
+
+### Air Gain
+
+Create a new column named airgain such that airgain = (departure delay - arrival delay) : this is the amount of delay a flight made up while in air.
+```{r}
+nyc$airgain <- nyc$dep_delay - nyc$arr_delay
+nyc_no_nas$airgain <- nyc_no_nas$dep_delay - nyc_no_nas$arr_delay
+```
+
+
+a) Explore airgain data - calculate suitable descriptive statistics and appropriate graphics to better understand this data. This part is open ended - you do what you feel works best for you.
+```{r}
+#Let's do a Histogram of airgain
+hist(nyc$airgain)
+mean(nyc$airgain, na.rm = TRUE)
+median(nyc$airgain, na.rm = TRUE)
+
+```
+
+
+b) Answer the questions:
+
+  - do airlines actually gain any time when in air on average? 
+  
+  **A: Airline in general do actually gain time. On average they win `r round(mean(nyc$airgain, na.rm = TRUE),2)`**
+
+  - Calculate average airgain for different airlines - which airlines do a better job, which do a worse job? 
+```{r}
+round(tapply(nyc_no_nas$airgain, nyc_no_nas$carrier, mean),2)
+barplot(sort(round(tapply(nyc_no_nas$airgain, nyc_no_nas$carrier, mean),2), decreasing=TRUE))
+```
+
+**A: The mean air gain can be found in the previous table. As seen in the graph, Alaska Airlines is the one doing the best job and Frontier is the worst**
+
+## Merging Data Frames and Open Questions
+
+> This section and the next is new compared to the class exercise. As you had an opportunity to work together in your breakout rooms for previous questions, this and the next section will carry a higher weight in grading for this HW.
+
+You can get detailed information about the physical planes in our dataset in this file: `planes.csv`. Download and save this file in your project directory.
+
+a) Read the `planes.csv` file using `read.csv` command. Do any data cleaning necessary.
+```{r}
+planes <- read.csv("planes.csv")
+#Quick exploration of the data
+summary(planes)
+str(planes)
+#Let's delete column X and column speed
+planes$X <- NULL
+planes$speed <- NULL
+#let's fix some fields
+planes$model <- as.factor(planes$model)
+planes$tailnum <- as.factor(planes$tailnum)
+planes$year <- as.factor(planes$year)
+planes$type <- as.factor(planes$type)
+planes$manufacturer <- as.factor(planes$manufacturer)
+planes$model <- as.factor(planes$model)
+planes$engines <- as.factor(planes$engines)
+planes$engine <- as.factor(planes$engine)
+summary(planes)
+str(planes)
+planes <- na.omit(planes)
+```
+
+
+b) Merge the flights data and the planes data using the `merge` command. You should do the merge on the common column named `tailnum`. *getting this right may need some trial and error and getting some help*.
+
+```{r}
+#because of the number of factors in tailnum are less in the planes data, the total number of rows is going to be reduced
+length(levels(nyc_no_nas$tailnum))
+length(levels(planes$tailnum))
+#Merging the data
+merged_data <-merge(nyc_no_nas,planes,  by= "tailnum")
+summary(merged_data)
+str(merged_data)
+```
+
+
+c) Now that you have a merged dataset, think of what interesting questions that you can ask that can be answered using the merged dataset. You are asked to pose five interesting questions and answer them. (For example: who are the top 10 manufacturers of planes that fly out of NYC airports?) **Be creative. Be bold. Ask questions that you would want to know answers to even if you were not doing this for a HW. **
+
+### Question # 1
+
+Question # 1 - What airline has the highest capacity (seats) to transport passengers in a year? - This airline might be transporting more people or it may be the airline with the biggest market share (assuming that all airlines are fill the planes similarly)
+
+```{r}
+# The most easy and general way of reviewing this is adding all the available seats - Because the numbers are very big, we are to determine the %
+
+100*(tapply(merged_data$seats, merged_data$carrier, sum)/sum(merged_data$seats))
+
+barplot(sort(100*(tapply(merged_data$seats, merged_data$carrier, sum)/sum(merged_data$seats)), decreasing = TRUE), col = 'skyblue3')
+```
+
+**The top 3 airlines have around 66% of the market share. Do they compete with similar strategies? This question can be answered in many ways. So we are going to break the question in:**
+
+### Question # 2
+
+Question 2 - Do the top airlines compete in the same routes?
+```{r}
+top3 <- merged_data[merged_data$carrier =="UA"|merged_data$carrier =="DL"|merged_data$carrier =="B6",]
+# Frequencies
+table(droplevels(top3$carrier))
+# Frequencies or number of flights is higher for UA and lower for DL. Let's understand the number of flights per destination.
+table(droplevels(top3$dest),droplevels(top3$carrier))
+# Let's store this in a data frame
+freqtable <- as.data.frame(table(droplevels(top3$dest),droplevels(top3$carrier)))
+colnames(freqtable) <- c("Destination", "Carrier", "Freq")
+freqtable <- freqtable[!freqtable$Destination== "ANC",]
+freqtable <- freqtable[!freqtable$Destination== "BDL",]
+freqtable <- freqtable[!freqtable$Destination== "BNA",]
+freqtable <- freqtable[!freqtable$Destination== "BZN",]
+freqtable <- freqtable[!freqtable$Destination== "CVG",]
+freqtable <- freqtable[!freqtable$Destination== "DCA",]
+freqtable <- freqtable[!freqtable$Destination== "EYW",]
+freqtable <- freqtable[!freqtable$Destination== "IND",]
+freqtable <- freqtable[!freqtable$Destination== "MTJ",]
+freqtable <- freqtable[!freqtable$Destination== "OMA",]
+freqtable <- freqtable[!freqtable$Destination== "PHL",]
+freqtable <- freqtable[!freqtable$Destination== "SDF",]
+freqtable <- freqtable[!freqtable$Destination== "STL",]
+freqtable <- freqtable[!freqtable$Destination== "ABQ",]
+freqtable <- freqtable[!freqtable$Destination== "ACK",]
+freqtable <- freqtable[!freqtable$Destination== "HNL",]
+freqtable <- freqtable[!freqtable$Destination== "JAC",]
+freqtable <- freqtable[!freqtable$Destination== "MCI",]
+freqtable <- freqtable[!freqtable$Destination== "MVY",]
+freqtable <- freqtable[!freqtable$Destination== "OAK",]
+freqtable <- freqtable[!freqtable$Destination== "PIT",]
+freqtable <- freqtable[!freqtable$Destination== "PSE",]
+freqtable <- freqtable[!freqtable$Destination== "CLE",]
+freqtable <- freqtable[!freqtable$Destination== "STT",]
+#Let's simplify the number of destinations to use a heatmap
+
+
+ggplot(freqtable, aes(Carrier, Destination))+
+  geom_tile(aes(fill=Freq), colour = "black")+
+  scale_fill_gradient(low = "white", high = "red")
+
+
+```
+
+**As we can see from the previous table and heat-table. Delta (DL) has an unique position flying to Atlanta (we know they have a hub there) and it basically owns the route without competition. On the other side, United Airlines (UA) is strong in 4 routes IAH, LAX, ORD and SFO. In these routes there is virtually no competition in the IAH, ORD routes, but, in the LAX/SFO routes the other top airlines are competing "hard". Seems that covering the routes from East to West is strategic. 
+Finally, Jet Blue (B6) seems to have a different strategy. They seem to be present in more routes, but, there strongest routes are the ones going to Florida.**
+
+### Question # 3
+
+Question 3 - From these top 3 airlines. How old are the airplanes? 
+
+```{r}
+
+top3$year.y <- as.numeric(as.character(top3$year.y))
+ggplot(data=top3, aes(x=carrier, y=year.y))+geom_boxplot(color="red", fill="orange", alpha=0.2)
+
+```
+
+**On average, Jet Blue airplanes are less old compared to the other airlines. Delta seems to have to widest airplane fleet as seen in the graph.**
+
+### Question # 4
+
+Question #4 - Let's change gears. Is this a "seasonal" industry?
+
+```{r}
+barplot(table(merged_data$month), beside = TRUE,  ylim = c(18000,25000),xpd=FALSE, col = 'darkblue', xlab = "Month", ylab = "# of Flights")
+```
+
+**As seen in the previous graph, the industry is seasonal. What's most important is that there are less flights in January/February and more flights in Aug/Sep/Nov**
+
+### Question # 5
+
+Question # 5 - What is the average profile of airplane departures in a day?
+
+```{r}
+barplot(table(merged_data$hour),xlim = c(0,24),xpd=FALSE, col = 'darkcyan', xlab = "Month", ylab = "Hour of the day")
+```
+
+**From the previous graph we can conclude that from midnight to 5 am there are no airplanes departing. This could be due to working hours or regulations of the airports. The biggest peaks occur in the morning at 6 and 8 am.**
+
+### Making Your HTML Look Nice
+
+We want our report to be good looking, professional documents. To that end, I am asking you to do the following:
+
+- Have a floating table of contents
+
+- Include code folding in your output. You can find more about code folding here: https://bookdown.org/yihui/rmarkdown/html-document.html#code-folding
+
+
+That's it. Once you are done, make sure everything works and knits well and then you can push your changes to the GitHub repo and uplaod the RMD flile and the html output to Canvas.
+
+**Have Fun!**
+
+Sanjeev
